@@ -1,0 +1,37 @@
+# Tests à chaque push, pull request et tag de version.
+name: Tests
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: python -m pytest -q --cov --cov-report=term-missing:skip-covered
+      # Le wheel doit contenir la police et les icônes (sinon les images sortent sans icônes ni accents)
+      - run: python -m build --wheel
+      - run: >-
+          python -c "import zipfile, glob;
+          names = zipfile.ZipFile(glob.glob('dist/*.whl')[0]).namelist();
+          assert any(n.endswith('assets/fonts/Inter.ttf') for n in names), 'police absente du wheel';
+          icons = sum(n.startswith('albion_create_image_build/assets/icons/') for n in names);
+          assert icons > 200, f'icônes absentes du wheel ({icons})';
+          print('wheel OK :', icons, 'icônes')"
