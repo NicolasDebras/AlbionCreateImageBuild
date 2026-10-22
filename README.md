@@ -15,13 +15,14 @@ Dépendances : Pillow et aiohttp. Python 3.11 ou plus récent.
 
 ## Installation
 
-Dans un `requirements.txt` :
-
 ```
-albion-create-image-build @ https://github.com/NicolasDebras/AlbionCreateImageBuild/archive/refs/tags/v1.0.1.tar.gz
+pip install albion-create-image-build
 ```
 
-Cette URL d'archive fonctionne sans git (par exemple dans une image Docker `python:3.13-slim`) et sans token, car le dépôt est public.
+Dans un `requirements.txt`, on fige la version : `albion-create-image-build==1.0.2`.
+
+On peut aussi installer directement depuis un tag GitHub, sans passer par PyPI :
+`albion-create-image-build @ https://github.com/NicolasDebras/AlbionCreateImageBuild/archive/refs/tags/v1.0.2.tar.gz`.
 
 ## Utilisation
 
@@ -116,7 +117,8 @@ Pour ajouter des icônes, partez d'un catalogue JSON `[{"id": "MAIN_SWORD", "ico
 1. Faire la modification, avec un test, et vérifier que les tests passent.
 2. Monter `__version__` dans `src/albion_create_image_build/__init__.py`, selon semver : correctif = patch, ajout = minor, changement de signature = major.
 3. Commit, puis `git tag vX.Y.Z` et `git push origin main --tags`.
-4. Dans chaque projet qui utilise la lib, changer le tag dans `requirements.txt`.
+4. Le tag déclenche `.github/workflows/release.yml` : tests, vérification que le tag correspond à `__version__`, puis publication sur PyPI (Trusted Publishing, sans token).
+5. Dans chaque projet qui utilise la lib, monter la version dans `requirements.txt`.
 
 ## Licence
 

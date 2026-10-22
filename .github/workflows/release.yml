@@ -1,0 +1,48 @@
+# Publication sur PyPI à chaque tag vX.Y.Z (Trusted Publishing : aucun token stocké).
+# Côté pypi.org : éditeur de confiance = dépôt NicolasDebras/AlbionCreateImageBuild,
+# workflow release.yml, environnement « pypi ».
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: pip install -e ".[dev]" twine
+      - run: python -m pytest -q
+      # Le tag doit correspondre à __version__ (sinon PyPI recevrait un numéro inattendu)
+      - run: >-
+          python -c "import sys, albion_create_image_build as m;
+          tag = '${{ github.ref_name }}'.removeprefix('v');
+          sys.exit(0 if tag == m.__version__ else f'tag v{tag} != __version__ {m.__version__}')"
+      - run: python -m build
+      - run: twine check --strict dist/*
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/albion-create-image-build/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

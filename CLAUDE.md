@@ -11,4 +11,4 @@ Lib Python publique : images PNG de builds/compos Albion. Utilisée par `botDisc
 
 ## Workflow
 - Tests (`.venv/Scripts/python -m pytest --cov`, couverture 100 %) + `ruff check .` avant tout commit ; README à jour si l'API change.
-- Push direct sur `main`. Publier : bump `__version__` (semver), commit, `git tag vX.Y.Z`, `git push origin main --tags`, CI verte, puis monter le tag dans `botDiscord/requirements.txt` et `lilium-site/api/requirements.txt` (bot avant site).
+- Push direct sur `main`. Publier : bump `__version__` (semver), commit, `git tag vX.Y.Z`, `git push origin main --tags` → `release.yml` publie sur PyPI ; puis monter la version dans `botDiscord/requirements.txt` et `lilium-site/api/requirements.txt` (bot avant site).
