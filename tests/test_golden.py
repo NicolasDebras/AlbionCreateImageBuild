@@ -57,7 +57,8 @@ def test_default_rendering_matches_golden_image(name):
     got = Image.open(io.BytesIO(_renders()[name])).convert("RGB")
     want = Image.open(GOLDEN / name).convert("RGB")
     assert got.size == want.size
-    assert ImageChops.difference(got, want).getbbox() is None, f"{name} : rendu différent de l'image de référence"
+    diff = ImageChops.difference(got, want).getbbox()
+    assert diff is None, f"{name} : rendu différent de l'image de référence dans la zone {diff}"
 
 
 def test_golden_fixture_uses_real_and_missing_icons():

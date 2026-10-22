@@ -24,6 +24,11 @@ def test_bundled_font_has_accents_and_weights():
     assert isinstance(font(16, "Bold"), ImageFont.FreeTypeFont)
 
 
+def test_font_layout_is_the_same_on_every_machine():
+    """raqm (Linux avec libfribidi) décalerait le texte : les images de référence ne tiendraient plus."""
+    assert font(16).layout_engine == ImageFont.Layout.BASIC
+
+
 def test_font_falls_back_to_pillow_default_on_unknown_weight():
     assert font(15, "Inexistante") is not None
 

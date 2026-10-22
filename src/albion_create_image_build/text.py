@@ -12,9 +12,12 @@ Font = ImageFont.FreeTypeFont | ImageFont.ImageFont
 
 @lru_cache(maxsize=32)
 def font(size: int, weight: str = "Regular") -> Font:
-    """Inter à la graisse demandée (Regular, SemiBold, Bold…) ; police de Pillow si Inter est illisible."""
+    """Inter à la graisse demandée (Regular, SemiBold, Bold…) ; police de Pillow si Inter est illisible.
+
+    Mise en page BASIC imposée : avec raqm (présent ou non selon la machine), le texte se décale de
+    quelques pixels ; ainsi une même image est identique partout (Windows, Linux, Docker slim)."""
     try:
-        f = ImageFont.truetype(str(FONT_FILE), size)
+        f = ImageFont.truetype(str(FONT_FILE), size, layout_engine=ImageFont.Layout.BASIC)
         f.set_variation_by_name(weight)
         return f
     except (OSError, ValueError):

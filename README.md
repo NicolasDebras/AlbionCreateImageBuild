@@ -18,7 +18,7 @@ Dépendances : Pillow et aiohttp. Python 3.11 ou plus récent.
 Dans un `requirements.txt` :
 
 ```
-albion-create-image-build @ https://github.com/NicolasDebras/AlbionCreateImageBuild/archive/refs/tags/v1.0.0.tar.gz
+albion-create-image-build @ https://github.com/NicolasDebras/AlbionCreateImageBuild/archive/refs/tags/v1.0.1.tar.gz
 ```
 
 Cette URL d'archive fonctionne sans git (par exemple dans une image Docker `python:3.13-slim`) et sans token, car le dépôt est public.
