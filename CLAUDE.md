@@ -14,7 +14,7 @@ Lib Python publique : images PNG de builds/compos Albion. Utilisée par `botDisc
 - Push direct sur `main`. Publier : bump `__version__` (semver), commit, `git tag vX.Y.Z`, `git push origin main --tags` → `release.yml` publie sur PyPI ; puis monter la version dans `botDiscord/requirements.txt` et `lilium-site/api/requirements.txt` (bot avant site).
 
 ## Publication PyPI (prévue, pas encore faite)
-- Objectif : `pip install albion-create-image-build` (nom libre sur PyPI). Tout est prêt côté repo : `.github/workflows/release.yml` (Trusted Publishing, environnement `pypi`), version `1.0.2` sur `main`.
+- Objectif : `pip install albion-create-image-build` (nom libre sur PyPI). Tout est prêt côté repo : `.github/workflows/release.yml` (Trusted Publishing, environnement `pypi`), version `1.1.0` sur `main` (la 1.0.2 n'a jamais été taguée).
 - Reste à faire par le propriétaire : compte pypi.org + « pending publisher » GitHub (owner `NicolasDebras`, repo `AlbionCreateImageBuild`, workflow `release.yml`, environnement `pypi`).
-- Ensuite seulement : `git tag v1.0.2 && git push origin v1.0.2` (taguer avant = publication refusée) ; vérifier `pip install albion-create-image-build` dans un venv neuf ; puis passer le bot puis le site de l'URL GitHub (`v1.0.1`) à `albion-create-image-build==1.0.2`.
+- Ensuite seulement : relancer le job « publish » du run Release du tag v1.1.0 (déjà poussé pour les installs par URL GitHub) ; vérifier `pip install albion-create-image-build` dans un venv neuf ; puis passer le bot puis le site de l'URL GitHub (`v1.1.0`) à `albion-create-image-build==1.1.0`.
 - Ce qui part sur PyPI est public et définitif (une version ne se remplace pas) : README, LICENSE et métadonnées de `pyproject.toml` soignés ; `twine check --strict` doit passer.

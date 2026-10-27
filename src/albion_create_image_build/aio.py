@@ -6,7 +6,7 @@ from collections.abc import Iterable, Mapping
 from .build import Build, render_build_image
 from .compo import COMPO_MAX_ROWS, CompoRow, render_compo_image
 from .icons import IconFetcher, default_fetcher
-from .items import item_ids
+from .items import item_ids, spell_ids
 from .labels import Labels
 from .theme import DEFAULT_THEME, Theme
 
@@ -14,7 +14,8 @@ from .theme import DEFAULT_THEME, Theme
 async def build_image(build: Build | Mapping, *, signature: str = "", theme: Theme = DEFAULT_THEME,
                       labels: Labels = Labels.FR, fetcher: IconFetcher | None = None) -> bytes:
     """PNG du build (voir ``render_build_image``), icônes comprises."""
-    icons = await (fetcher or default_fetcher()).fetch(item_ids(build.get("items")))
+    ids = item_ids(build.get("items")) + spell_ids(build.get("items"), build.get("spells"))
+    icons = await (fetcher or default_fetcher()).fetch(ids)
     return await asyncio.to_thread(render_build_image, build, icons, signature=signature, theme=theme, labels=labels)
 
 

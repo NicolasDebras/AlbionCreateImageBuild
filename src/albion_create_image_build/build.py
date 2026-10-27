@@ -11,7 +11,18 @@ from PIL import Image, ImageDraw
 
 from ._draw import MARGIN, SIGNATURE_H, centered_text, open_icon, tier_badge, to_png
 from ._draw import signature as draw_signature
-from .items import FREE_CHOICE, LAYOUT, SWAPS_KEY, SWAPS_MAX, ItemsInput, normalize_items
+from .items import (
+    FREE_CHOICE,
+    LAYOUT,
+    SPELL_PREFIX,
+    SWAPS_KEY,
+    SWAPS_MAX,
+    ItemsInput,
+    SpellsInput,
+    normalize_items,
+    shoes_any_spells,
+    spell_rows,
+)
 from .labels import Labels
 from .text import fit_text, font
 from .theme import DEFAULT_THEME, Theme
@@ -24,6 +35,7 @@ class Build(TypedDict, total=False):
     weapon: str         # texte libre sous la grille
     notes: str          # idem, après weapon
     items: ItemsInput   # équipement (voir items.py)
+    spells: SpellsInput  # sorts par objet + sort de bottes imposé (voir items.py)
 
 
 CELL, LABEL_H, GAP, HEADER_H = 128, 22, 14, 96
@@ -31,6 +43,11 @@ WIDTH = MARGIN * 2 + CELL * 3 + GAP * 2     # largeur sans swaps
 SWAP_CELL = 64
 SWAP_GAP = 8
 FOOTER_MAX_LINES = 8
+SPELL_ICON = 44          # section « Sorts » sous la grille : une ligne par objet
+SPELL_GAP = 8
+SPELL_ROW_H = SPELL_ICON + 22
+SPELLS_TITLE_H = 30
+SPELL_ROWS_MAX = 9       # 3 armes + 3 casques + 3 armures (+ bottes) : on coupe au-delà
 
 
 def _draw_cell(img: Image.Image, draw: ImageDraw.ImageDraw, x: int, y: int, slot: str, choices: list[str],
@@ -62,6 +79,48 @@ def _draw_cell(img: Image.Image, draw: ImageDraw.ImageDraw, x: int, y: int, slot
     if n > 1:
         centered_text(draw, (x, y + CELL - 22, x + CELL, y + CELL - 4), labels.n_choices.format(n=n),
                       font(13, "SemiBold"), theme.accent)
+
+
+def _draw_spell_icon(img: Image.Image, draw: ImageDraw.ImageDraw, x: int, y: int, size: int, spell: str,
+                     icons: Mapping[str, bytes | None], theme: Theme) -> None:
+    icon = open_icon(icons.get(SPELL_PREFIX + spell), size)
+    if icon:
+        img.paste(icon, (x, y), icon)
+    else:
+        draw.rounded_rectangle((x, y, x + size, y + size), radius=8, fill=theme.surface, outline=theme.border)
+        centered_text(draw, (x, y, x + size, y + size), "?", font(size // 2), theme.accent)
+
+
+def _draw_shoes_spell(img: Image.Image, draw: ImageDraw.ImageDraw, x: int, y: int, spells: Mapping[str, str],
+                      icons: Mapping[str, bytes | None], theme: Theme, labels: Labels) -> None:
+    """Case Bottes « au choix » avec un sort imposé : le sort en grand, le passif en coin."""
+    main = spells.get("a") or spells.get("p")
+    _draw_spell_icon(img, draw, x + (CELL - 84) // 2, y + 10, 84, main, icons, theme)
+    if spells.get("a") and spells.get("p"):
+        _draw_spell_icon(img, draw, x + CELL - 38, y + 58, 32, spells["p"], icons, theme)
+    centered_text(draw, (x, y + CELL - 26, x + CELL, y + CELL - 6), labels.free_choice, font(13, "SemiBold"),
+                  theme.accent)
+
+
+def _draw_spells(img: Image.Image, draw: ImageDraw.ImageDraw, top: int, rows: list,
+                 icons: Mapping[str, bytes | None], theme: Theme, labels: Labels) -> None:
+    """Section « Sorts » : par ligne, l'icône de l'objet puis ses sorts avec leur touche."""
+    draw.text((MARGIN, top), labels.spells, font=font(14, "SemiBold"), fill=theme.muted)
+    key_font = font(12, "SemiBold")
+    for r, (slot, item_id, spells) in enumerate(rows):
+        y = top + SPELLS_TITLE_H + r * SPELL_ROW_H
+        icon = open_icon(icons.get(item_id), SPELL_ICON)
+        if icon:
+            img.paste(icon, (MARGIN, y), icon)
+        else:
+            centered_text(draw, (MARGIN, y, MARGIN + SPELL_ICON, y + SPELL_ICON), "?", font(22), theme.accent)
+        x = MARGIN + SPELL_ICON + SPELL_GAP * 3
+        for key, spell in spells.items():
+            _draw_spell_icon(img, draw, x, y, SPELL_ICON, spell, icons, theme)
+            letter = labels.active_keys.get(slot, "A") if key == "a" else labels.spell_keys.get(key, key.upper())
+            centered_text(draw, (x, y + SPELL_ICON + 2, x + SPELL_ICON, y + SPELL_ICON + 18), letter, key_font,
+                          theme.muted)
+            x += SPELL_ICON + SPELL_GAP
 
 
 def _draw_swaps_column(img: Image.Image, draw: ImageDraw.ImageDraw, x: int, top: int, swaps: list[str],
@@ -100,10 +159,13 @@ def render_build_image(build: Build | Mapping, icons: Mapping[str, bytes | None]
     items = normalize_items(build.get("items"))
     swaps = [s for s in items.pop(SWAPS_KEY, []) if s != FREE_CHOICE][:SWAPS_MAX]
     footer_lines = _footer_lines(build)
+    rows = spell_rows(build.get("items"), build.get("spells"))[:SPELL_ROWS_MAX]
+    shoes_spell = shoes_any_spells(build.get("items"), build.get("spells"))
 
     grid_h = 3 * (CELL + LABEL_H) + 2 * GAP
+    spells_h = (SPELLS_TITLE_H + len(rows) * SPELL_ROW_H + 8) if rows else 0
     footer_h = (len(footer_lines) * 22 + 24) if footer_lines else 0
-    height = HEADER_H + grid_h + footer_h + MARGIN + (SIGNATURE_H if signature else 0)
+    height = HEADER_H + grid_h + spells_h + footer_h + MARGIN + (SIGNATURE_H if signature else 0)
     width = WIDTH + (SWAP_CELL + GAP) if swaps else WIDTH
 
     img = Image.new("RGBA", (width, height), theme.background)
@@ -120,12 +182,21 @@ def render_build_image(build: Build | Mapping, icons: Mapping[str, bytes | None]
                 continue
             x = MARGIN + c * (CELL + GAP)
             y = HEADER_H + r * (CELL + LABEL_H + GAP)
+            if slot == "shoes" and shoes_spell:
+                draw.rounded_rectangle((x, y, x + CELL, y + CELL), radius=14, fill=theme.surface,
+                                       outline=theme.accent, width=2)
+                centered_text(draw, (x, y + CELL + 2, x + CELL, y + CELL + LABEL_H), labels.slots.get(slot, slot),
+                              font(14), theme.muted)
+                _draw_shoes_spell(img, draw, x, y, shoes_spell, icons, theme, labels)
+                continue
             _draw_cell(img, draw, x, y, slot, items.get(slot, []), icons, theme, labels)
 
     if swaps:
         _draw_swaps_column(img, draw, WIDTH - MARGIN + GAP, HEADER_H + 22, swaps, icons, theme, labels)
 
-    y = HEADER_H + grid_h + 16
+    if rows:
+        _draw_spells(img, draw, HEADER_H + grid_h + 12, rows, icons, theme, labels)
+    y = HEADER_H + grid_h + spells_h + 16
     for line in footer_lines:
         draw.text((MARGIN, y), line, font=font(16), fill=theme.text)
         y += 22

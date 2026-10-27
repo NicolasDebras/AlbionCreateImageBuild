@@ -17,6 +17,10 @@ class Labels:
     swaps: str                               # titre de la colonne des objets de rechange
     compo_header: str                        # « {players} joueurs · {builds} builds »
     untitled: str                            # build sans nom
+    spells: str = "Sorts"                    # titre de la section des sorts (image du build)
+    # Touche de chaque emplacement de sort ; l'actif d'armure prend la touche du jeu (D, R, F)
+    spell_keys: Mapping[str, str] = MappingProxyType({"q": "Q", "w": "W", "e": "E", "p": "P", "p2": "P2"})
+    active_keys: Mapping[str, str] = MappingProxyType({"head": "D", "armor": "R", "shoes": "F"})
 
     FR: ClassVar["Labels"]
     EN: ClassVar["Labels"]
@@ -42,4 +46,5 @@ Labels.EN = Labels(
     swaps="Swaps",
     compo_header="{players} players · {builds} builds",
     untitled="Build",
+    spells="Spells",
 )

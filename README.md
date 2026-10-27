@@ -19,10 +19,10 @@ Dépendances : Pillow et aiohttp. Python 3.11 ou plus récent.
 pip install albion-create-image-build
 ```
 
-Dans un `requirements.txt`, on fige la version : `albion-create-image-build==1.0.2`.
+Dans un `requirements.txt`, on fige la version : `albion-create-image-build==1.1.0`.
 
 On peut aussi installer directement depuis un tag GitHub, sans passer par PyPI :
-`albion-create-image-build @ https://github.com/NicolasDebras/AlbionCreateImageBuild/archive/refs/tags/v1.0.2.tar.gz`.
+`albion-create-image-build @ https://github.com/NicolasDebras/AlbionCreateImageBuild/archive/refs/tags/v1.1.0.tar.gz`.
 
 ## Utilisation
 
@@ -53,6 +53,20 @@ png = await compo_image([
 - `*` laisse le choix au joueur.
 
 Les cases sont `mainhand`, `offhand`, `head`, `armor`, `shoes`, `cape`, `food`, `potion`, plus `swaps` (jusqu'à 6 objets de rechange). L'ancien format `{"mainhand": "ID"}` et une chaîne JSON sont aussi acceptés.
+
+**Sorts (optionnel).** `spells` donne les sorts imposés, rangés par id d'objet **sans tier**. Les emplacements sont :
+- `q`, `w`, `e` pour l'arme ;
+- `a` pour l'actif d'armure (touche D, R ou F) ;
+- `p` et `p2` pour les passifs.
+
+Ils sont dessinés dans une section « Sorts » sous la grille. La clé `@shoes` impose un sort de bottes quand la case Bottes est vide ou `*` : le sort est alors dessiné dans la case. Les icônes viennent du CDN, sous les clés `spell:<ID>` du dict d'icônes.
+
+```python
+build["spells"] = {
+    "2H_HOLYSTAFF": {"q": "HOLYBEAM", "p": "PASSIVE_HEALBONUS"},
+    "@shoes": {"a": "SPRINT_CD_REDUCTION"},             # Sprint rafraîchissant, bottes au choix
+}
+```
 
 ### Sans réseau / avec vos propres icônes
 
