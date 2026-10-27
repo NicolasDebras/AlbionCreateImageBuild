@@ -11,7 +11,7 @@ from PIL import Image, ImageDraw
 from ._draw import MARGIN, SIGNATURE_H, centered_text, open_icon, tier_badge, to_png
 from ._draw import signature as draw_signature
 from .build import Build
-from .items import FREE_CHOICE, SLOTS, SWAPS_KEY, SWAPS_MAX, normalize_items
+from .items import FREE_CHOICE, SLOTS, SPELL_PREFIX, SWAPS_KEY, SWAPS_MAX, normalize_items, shoes_any_spells
 from .labels import Labels
 from .text import fit_text, font
 from .theme import DEFAULT_THEME, RGB, Theme, mix
@@ -151,8 +151,12 @@ def render_compo_image(rows: Iterable[CompoRow | tuple], icons: Mapping[str, byt
             draw.text((MARGIN + 26, y + 46), fit_text(row.build.get("name") or "", font(16, "SemiBold"), C_LEFT - 38),
                       font=font(16, "SemiBold"), fill=accent)
             ix = MARGIN + C_LEFT
+            shoes_spell = shoes_any_spells(items, row.build.get("spells"))
             for slot in COMPO_SLOTS:
-                _draw_small_slot(img, draw, ix, y + (C_ROW_H - C_ICON) // 2, items.get(slot, []), icons, theme, labels)
+                choices = items.get(slot, [])
+                if slot == "shoes" and shoes_spell:   # bottes au choix, sort imposé : on dessine le sort
+                    choices = [SPELL_PREFIX + (shoes_spell.get("a") or shoes_spell["p"])]
+                _draw_small_slot(img, draw, ix, y + (C_ROW_H - C_ICON) // 2, choices, icons, theme, labels)
                 ix += C_ICON + C_ICON_GAP
             swaps = _swaps(items)
             if swaps:   # à droite des 8 cases, après un trait de la couleur du rôle

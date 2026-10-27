@@ -111,3 +111,25 @@ def test_build_image_fetches_spell_icons():
     f = Fetcher()
     asyncio.run(build_image({"items": {"mainhand": ["BOW"]}, "spells": {"BOW": {"q": "Q1"}}}, fetcher=f))
     assert f.calls == [["BOW", "spell:Q1"]]
+
+
+def test_compo_draws_required_boots_spell_instead_of_free_choice():
+    from albion_create_image_build import compo_image, render_compo_image, shoes_spell_id
+    build = {"name": "DPS", "items": {"shoes": ["*"]}, "spells": {SHOES_ANY: {"p": "PASSIVE_BALANCE"}}}
+    assert shoes_spell_id(build["items"], build["spells"]) == ["spell:PASSIVE_BALANCE"]
+    assert shoes_spell_id({"shoes": ["SHOES_PLATE_SET1"]}, build["spells"]) == []
+    icons = {"spell:PASSIVE_BALANCE": png((0, 200, 0))}
+    plain = colors(render_compo_image([("P1", "DPS", 1, {**build, "spells": {}})], icons))
+    spelled = colors(render_compo_image([("P1", "DPS", 1, build)], icons))
+    assert (0, 200, 0) not in plain and (0, 200, 0) in spelled
+
+    class Fetcher:
+        calls = []
+
+        async def fetch(self, ids):
+            self.calls.append(list(ids))
+            return {}
+
+    f = Fetcher()
+    asyncio.run(compo_image([("P1", "DPS", 1, build)], fetcher=f))
+    assert f.calls == [["spell:PASSIVE_BALANCE"]]

@@ -6,7 +6,7 @@ from collections.abc import Iterable, Mapping
 from .build import Build, render_build_image
 from .compo import COMPO_MAX_ROWS, CompoRow, render_compo_image
 from .icons import IconFetcher, default_fetcher
-from .items import item_ids, spell_ids
+from .items import item_ids, shoes_spell_id, spell_ids
 from .labels import Labels
 from .theme import DEFAULT_THEME, Theme
 
@@ -28,6 +28,7 @@ async def compo_image(rows: Iterable[CompoRow | tuple], *, signature: str = "", 
         return None
     ids: list[str] = []
     for row in rows:
-        ids.extend(i for i in item_ids(row.build.get("items")) if i not in ids)
+        row_ids = item_ids(row.build.get("items")) + shoes_spell_id(row.build.get("items"), row.build.get("spells"))
+        ids.extend(i for i in row_ids if i not in ids)
     icons = await (fetcher or default_fetcher()).fetch(ids)
     return await asyncio.to_thread(render_compo_image, rows, icons, signature=signature, theme=theme, labels=labels)

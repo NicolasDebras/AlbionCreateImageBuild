@@ -19,10 +19,10 @@ Dépendances : Pillow et aiohttp. Python 3.11 ou plus récent.
 pip install albion-create-image-build
 ```
 
-Dans un `requirements.txt`, on fige la version : `albion-create-image-build==1.1.0`.
+Dans un `requirements.txt`, on fige la version : `albion-create-image-build==1.1.1`.
 
 On peut aussi installer directement depuis un tag GitHub, sans passer par PyPI :
-`albion-create-image-build @ https://github.com/NicolasDebras/AlbionCreateImageBuild/archive/refs/tags/v1.1.0.tar.gz`.
+`albion-create-image-build @ https://github.com/NicolasDebras/AlbionCreateImageBuild/archive/refs/tags/v1.1.1.tar.gz`.
 
 ## Utilisation
 

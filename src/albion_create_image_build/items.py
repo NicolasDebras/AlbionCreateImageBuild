@@ -95,6 +95,12 @@ def shoes_any_spells(items: ItemsInput, spells: SpellsInput) -> dict[str, str]:
     return normalize_spells(spells).get(SHOES_ANY, {})
 
 
+def shoes_spell_id(items: ItemsInput, spells: SpellsInput) -> list[str]:
+    """Clé d'icône du sort de bottes imposé (actif, sinon passif), seule dessinée sur l'image de compo."""
+    s = shoes_any_spells(items, spells)
+    return [SPELL_PREFIX + (s.get("a") or s["p"])] if s else []
+
+
 def spell_ids(items: ItemsInput, spells: SpellsInput) -> list[str]:
     """Clés d'icônes (« spell:<ID> ») des sorts dessinés, sans doublon."""
     seen: list[str] = []
