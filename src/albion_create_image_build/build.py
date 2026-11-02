@@ -9,7 +9,7 @@ from typing import TypedDict
 
 from PIL import Image, ImageDraw
 
-from ._draw import MARGIN, SIGNATURE_H, centered_text, open_icon, tier_badge, to_png
+from ._draw import MARGIN, SIGNATURE_H, IconImages, centered_text, tier_badge, to_png
 from ._draw import signature as draw_signature
 from .items import (
     FREE_CHOICE,
@@ -51,7 +51,7 @@ SPELL_ROWS_MAX = 9       # 3 armes + 3 casques + 3 armures (+ bottes) : on coupe
 
 
 def _draw_cell(img: Image.Image, draw: ImageDraw.ImageDraw, x: int, y: int, slot: str, choices: list[str],
-               icons: Mapping[str, bytes | None], theme: Theme, labels: Labels) -> None:
+               icons: IconImages, theme: Theme, labels: Labels) -> None:
     filled = bool(choices)
     draw.rounded_rectangle((x, y, x + CELL, y + CELL), radius=14, fill=theme.surface,
                            outline=theme.accent if filled else theme.border, width=2 if filled else 1)
@@ -70,7 +70,7 @@ def _draw_cell(img: Image.Image, draw: ImageDraw.ImageDraw, x: int, y: int, slot
     top = y + (CELL - size) // 2
     for i, item_id in enumerate(choices[:3]):
         ix = start_x + i * (size + 4)
-        icon = open_icon(icons.get(item_id), size)
+        icon = icons.get(item_id, size)
         if icon:
             img.paste(icon, (ix, top), icon)
         else:
@@ -82,8 +82,8 @@ def _draw_cell(img: Image.Image, draw: ImageDraw.ImageDraw, x: int, y: int, slot
 
 
 def _draw_spell_icon(img: Image.Image, draw: ImageDraw.ImageDraw, x: int, y: int, size: int, spell: str,
-                     icons: Mapping[str, bytes | None], theme: Theme) -> None:
-    icon = open_icon(icons.get(SPELL_PREFIX + spell), size)
+                     icons: IconImages, theme: Theme) -> None:
+    icon = icons.get(SPELL_PREFIX + spell, size)
     if icon:
         img.paste(icon, (x, y), icon)
     else:
@@ -92,7 +92,7 @@ def _draw_spell_icon(img: Image.Image, draw: ImageDraw.ImageDraw, x: int, y: int
 
 
 def _draw_shoes_spell(img: Image.Image, draw: ImageDraw.ImageDraw, x: int, y: int, spells: Mapping[str, str],
-                      icons: Mapping[str, bytes | None], theme: Theme, labels: Labels) -> None:
+                      icons: IconImages, theme: Theme, labels: Labels) -> None:
     """Case Bottes « au choix » avec un sort imposé : le sort en grand, le passif en coin."""
     main = spells.get("a") or spells.get("p")
     _draw_spell_icon(img, draw, x + (CELL - 84) // 2, y + 10, 84, main, icons, theme)
@@ -103,13 +103,13 @@ def _draw_shoes_spell(img: Image.Image, draw: ImageDraw.ImageDraw, x: int, y: in
 
 
 def _draw_spells(img: Image.Image, draw: ImageDraw.ImageDraw, top: int, rows: list,
-                 icons: Mapping[str, bytes | None], theme: Theme, labels: Labels) -> None:
+                 icons: IconImages, theme: Theme, labels: Labels) -> None:
     """Section « Sorts » : par ligne, l'icône de l'objet puis ses sorts avec leur touche."""
     draw.text((MARGIN, top), labels.spells, font=font(14, "SemiBold"), fill=theme.muted)
     key_font = font(12, "SemiBold")
     for r, (slot, item_id, spells) in enumerate(rows):
         y = top + SPELLS_TITLE_H + r * SPELL_ROW_H
-        icon = open_icon(icons.get(item_id), SPELL_ICON)
+        icon = icons.get(item_id, SPELL_ICON)
         if icon:
             img.paste(icon, (MARGIN, y), icon)
         else:
@@ -124,14 +124,14 @@ def _draw_spells(img: Image.Image, draw: ImageDraw.ImageDraw, top: int, rows: li
 
 
 def _draw_swaps_column(img: Image.Image, draw: ImageDraw.ImageDraw, x: int, top: int, swaps: list[str],
-                       icons: Mapping[str, bytes | None], theme: Theme, labels: Labels) -> None:
+                       icons: IconImages, theme: Theme, labels: Labels) -> None:
     """Colonne « Swaps » à droite de la grille : une petite case par objet de rechange."""
     draw.text((x, top - 26), labels.swaps, font=font(14, "SemiBold"), fill=theme.muted)
     for i, item_id in enumerate(swaps):
         y = top + i * (SWAP_CELL + SWAP_GAP)
         draw.rounded_rectangle((x, y, x + SWAP_CELL, y + SWAP_CELL), radius=10, fill=theme.surface,
                                outline=theme.accent, width=2)
-        icon = open_icon(icons.get(item_id), SWAP_CELL - 8)
+        icon = icons.get(item_id, SWAP_CELL - 8)
         if icon:
             img.paste(icon, (x + 4, y + 4), icon)
         else:
@@ -156,6 +156,7 @@ def render_build_image(build: Build | Mapping, icons: Mapping[str, bytes | None]
 
     `icons` : {id d'objet: PNG ou None} ; une icône absente ou illisible est dessinée « ? ».
     """
+    icons = IconImages(icons)
     items = normalize_items(build.get("items"))
     swaps = [s for s in items.pop(SWAPS_KEY, []) if s != FREE_CHOICE][:SWAPS_MAX]
     footer_lines = _footer_lines(build)

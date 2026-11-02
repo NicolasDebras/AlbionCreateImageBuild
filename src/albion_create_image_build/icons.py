@@ -45,7 +45,7 @@ class IconFetcher:
     - sort (« spell:SPRINTHOT ») : icône du sort sur le CDN.
 
     Seules les réponses sûres (200, 404) sont mises en cache : une lenteur passagère du CDN
-    ne marque pas l'icône comme absente.
+    ne marque pas l'icône comme absente. Cache plein : la moins récemment servie est oubliée.
     """
 
     def __init__(self, *, icons_dir: Path | None = ICONS_DIR, request_timeout: float = 8, retries: int = 2,
@@ -86,18 +86,22 @@ class IconFetcher:
         return False, None
 
     def _remember(self, item_id: str, data: bytes | None) -> bytes | None:
+        while len(self.cache) >= self.cache_max:   # cache plein : on oublie l'icône la moins récemment servie
+            del self.cache[next(iter(self.cache))]
         self.cache[item_id] = data
+        return data
+
+    def _cached(self, item_id: str) -> bytes | None:
+        self.cache[item_id] = data = self.cache.pop(item_id)   # remise en fin d'ordre : servie récemment
         return data
 
     async def fetch_one(self, session, item_id: str) -> bytes | None:
         """Icône d'un objet (voir la classe), avec le cache."""
         if item_id in self.cache:
-            return self.cache[item_id]
+            return self._cached(item_id)
         spell = item_id[len(SPELL_PREFIX):] if (item_id or "").startswith(SPELL_PREFIX) else None
         if not _ITEM_ID_RE.match(item_id if spell is None else spell) or (spell and "@" in spell):
             return None
-        if len(self.cache) >= self.cache_max:
-            self.cache.clear()
         if spell is not None:
             sure, data = await self._get(session, SPELL_ICON_URL.format(spell_id=spell))
             return self._remember(item_id, data) if sure else None
@@ -123,8 +127,15 @@ class IconFetcher:
         """{id: icône ou None} pour chaque id (doublons ignorés), au plus `concurrency` requêtes
         à la fois et `deadline` secondes en tout."""
         ids = list(dict.fromkeys(ids))
-        if not ids:
-            return {}
+        icons: Icons = dict.fromkeys(ids)
+        missing = []
+        for i in ids:
+            if i in self.cache:
+                icons[i] = self._cached(i)
+            else:
+                missing.append(i)
+        if not missing:   # tout est en cache : pas de session HTTP à ouvrir
+            return icons
         sem = asyncio.Semaphore(self.concurrency)
 
         async def one(session, item_id):
@@ -132,12 +143,11 @@ class IconFetcher:
                 return await self.fetch_one(session, item_id)
 
         async with self.session_factory() as session:
-            tasks = {asyncio.ensure_future(one(session, i)): i for i in ids}
+            tasks = {asyncio.ensure_future(one(session, i)): i for i in missing}
             done, pending = await asyncio.wait(tasks, timeout=self.deadline)
             for t in pending:
                 t.cancel()
             await asyncio.gather(*pending, return_exceptions=True)
-        icons: Icons = dict.fromkeys(ids)
         for t in done:
             if not t.cancelled() and t.exception() is None:
                 icons[tasks[t]] = t.result()

@@ -110,6 +110,13 @@ def test_role_icons_are_distinct_white_pictograms():
     assert role_icon("inconnu", 32).tobytes() == role_icon("dot", 32).tobytes()
 
 
+def test_role_icon_is_a_copy_safe_to_modify():
+    """Le pictogramme est mémorisé : modifier l'image rendue ne doit pas abîmer les suivantes."""
+    first = role_icon("shield", 32)
+    first.paste((255, 0, 0, 255), (0, 0, 32, 32))
+    assert role_icon("shield", 32).tobytes() != first.tobytes()
+
+
 def test_fit_text_cuts_between_words_with_ellipsis():
     f = font(16)
     assert fit_text("Tank", f, 200) == "Tank"

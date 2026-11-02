@@ -34,7 +34,7 @@ from .labels import Labels
 from .text import fit_text, font, signature_text
 from .theme import DEFAULT_THEME, ROLE_SHAPES, Theme, role_color, role_rank
 
-__version__ = "1.1.1"
+__version__ = "1.1.2"
 
 __all__ = [
     "COMPO_MAX_ROWS", "COMPO_WIDTH", "DEFAULT_THEME", "FREE_CHOICE", "ICONS_DIR", "LAYOUT", "ROLE_SHAPES", "SHOES_ANY",

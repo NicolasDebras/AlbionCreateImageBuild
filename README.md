@@ -19,10 +19,10 @@ Dépendances : Pillow et aiohttp. Python 3.11 ou plus récent.
 pip install albion-create-image-build
 ```
 
-Dans un `requirements.txt`, on fige la version : `albion-create-image-build==1.1.1`.
+Dans un `requirements.txt`, on fige la version : `albion-create-image-build==1.1.2`.
 
 On peut aussi installer directement depuis un tag GitHub, sans passer par PyPI :
-`albion-create-image-build @ https://github.com/NicolasDebras/AlbionCreateImageBuild/archive/refs/tags/v1.1.1.tar.gz`.
+`albion-create-image-build @ https://github.com/NicolasDebras/AlbionCreateImageBuild/archive/refs/tags/v1.1.2.tar.gz`.
 
 ## Utilisation
 
@@ -105,7 +105,7 @@ icons = await fetcher.fetch(["T8_MAIN_SWORD@1", "MEAL_STEW"])
 png = await build_image(build, fetcher=fetcher)
 ```
 
-Par défaut, un `IconFetcher` partagé par tout le processus est utilisé (`default_fetcher()`).
+Par défaut, un `IconFetcher` partagé par tout le processus est utilisé (`default_fetcher()`). Son cache est borné (`cache_max`, les icônes les moins récemment servies sont oubliées) ; si toutes les icônes demandées y sont déjà, aucune connexion n'est ouverte.
 
 ## Développement
 

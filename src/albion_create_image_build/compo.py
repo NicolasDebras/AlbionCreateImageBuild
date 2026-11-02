@@ -4,11 +4,12 @@ regroupées par party, sur un fond en dégradé.
 Fonction pure, comme ``build.render_build_image``. Pour tout faire d'un coup en async : ``aio.compo_image``.
 """
 from collections.abc import Iterable, Mapping
+from functools import lru_cache
 from typing import NamedTuple
 
 from PIL import Image, ImageDraw
 
-from ._draw import MARGIN, SIGNATURE_H, centered_text, open_icon, tier_badge, to_png
+from ._draw import MARGIN, SIGNATURE_H, IconImages, centered_text, tier_badge, to_png
 from ._draw import signature as draw_signature
 from .build import Build
 from .items import FREE_CHOICE, SLOTS, SPELL_PREFIX, SWAPS_KEY, SWAPS_MAX, normalize_items, shoes_any_spells
@@ -35,6 +36,12 @@ COMPO_MAX_ROWS = 40   # la hauteur suit le nombre de lignes : au-delà, image d�
 def role_icon(shape: str, size: int) -> Image.Image:
     """Pictogramme blanc (``theme.ROLE_SHAPES`` : swords, shield, cross, star ; pastille ronde sinon),
     dessiné en 64 px puis réduit pour des bords lissés."""
+    return _role_icon(shape, size).copy()
+
+
+@lru_cache(maxsize=32)
+def _role_icon(shape: str, size: int) -> Image.Image:
+    """``role_icon`` mémorisé (même pictogramme sur chaque ligne de la compo) ; ne pas modifier l'image rendue."""
     c = 64
     img = Image.new("RGBA", (c, c), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
@@ -65,22 +72,24 @@ def _draw_role_badge(img: Image.Image, draw: ImageDraw.ImageDraw, x: int, y: int
     h, icon_s = 28, 16
     w = 10 + icon_s + 6 + int(draw.textlength(label, font=f)) + 12
     draw.rounded_rectangle((x, y, x + w, y + h), radius=h // 2, fill=theme.role_color(role))
-    icon = role_icon(theme.role_shape(role), icon_s)
+    icon = _role_icon(theme.role_shape(role), icon_s)
     img.paste(icon, (x + 10, y + (h - icon_s) // 2), icon)
     draw.text((x + 10 + icon_s + 6, y + (h - 15) / 2 - 2), label, font=f, fill=(255, 255, 255))
     return x + w
 
 
 def _gradient(width: int, height: int, top: RGB, bottom: RGB) -> Image.Image:
-    img = Image.new("RGBA", (width, height))
-    draw = ImageDraw.Draw(img)
-    for y in range(height):
-        draw.line([(0, y), (width, y)], fill=mix(top, bottom, y / max(height - 1, 1)))
-    return img
+    """Dégradé vertical : une colonne de 1 px étirée en largeur (une couleur par ligne)."""
+    (r, g, b), span = top, max(height - 1, 1)
+    dr, dg, db = (y - x for x, y in zip(top, bottom, strict=True))   # mêmes calculs que mix(), sans appel par ligne
+    column = Image.new("RGBA", (1, height))
+    column.putdata([(round(r + dr * t), round(g + dg * t), round(b + db * t), 255)
+                    for t in (y / span for y in range(height))])
+    return column.resize((width, height), Image.NEAREST)
 
 
 def _draw_small_slot(img: Image.Image, draw: ImageDraw.ImageDraw, x: int, y: int, choices: list[str],
-                     icons: Mapping[str, bytes | None], theme: Theme, labels: Labels) -> None:
+                     icons: IconImages, theme: Theme, labels: Labels) -> None:
     draw.rounded_rectangle((x, y, x + C_ICON, y + C_ICON), radius=8, fill=theme.surface)
     if not choices:
         return
@@ -90,7 +99,7 @@ def _draw_small_slot(img: Image.Image, draw: ImageDraw.ImageDraw, x: int, y: int
         centered_text(draw, (x, mid - 15, x + C_ICON, mid), first, font(12, "Bold"), theme.accent)
         centered_text(draw, (x, mid - 1, x + C_ICON, mid + 14), second, font(12, "Bold"), theme.accent)
         return
-    icon = open_icon(icons.get(choices[0]), C_ICON)
+    icon = icons.get(choices[0], C_ICON)
     if icon:
         img.paste(icon, (x, y), icon)
     else:
@@ -103,7 +112,7 @@ def _draw_small_slot(img: Image.Image, draw: ImageDraw.ImageDraw, x: int, y: int
         bx = x + C_ICON - C_MINI + 4 - i * (C_MINI + 2)
         draw.rounded_rectangle((bx - 1, by - 1, bx + C_MINI + 1, by + C_MINI + 1), radius=6, fill=theme.surface,
                                outline=theme.accent, width=2)
-        mini = open_icon(icons.get(alt), C_MINI)
+        mini = icons.get(alt, C_MINI)
         if mini:
             img.paste(mini, (bx, by), mini)
         else:
@@ -119,6 +128,7 @@ def render_compo_image(rows: Iterable[CompoRow | tuple], icons: Mapping[str, byt
     """PNG de la compo. `rows` = [(party, rôle, nombre, build)] dans l'ordre d'affichage (voir
     ``sort_rows``), au plus COMPO_MAX_ROWS ; une couleur d'accent par rôle (``theme.role_colors``)."""
     rows = [CompoRow(*r) for r in list(rows)[:COMPO_MAX_ROWS]]
+    icons = IconImages(icons)
     items_of = [normalize_items(r.build.get("items")) for r in rows]
     max_swaps = max((len(_swaps(items)) for items in items_of), default=0)
     width = COMPO_WIDTH + (14 + max_swaps * (C_ICON + C_ICON_GAP) if max_swaps else 0)

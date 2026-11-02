@@ -1,5 +1,6 @@
 """Primitives de dessin communes aux images de build et de compo (privé)."""
 import io
+from collections.abc import Mapping
 
 from PIL import Image, ImageDraw
 
@@ -11,13 +12,31 @@ MARGIN = 28
 SIGNATURE_H = 26   # bande du bas pour la signature (« Serveur · Bot »)
 
 
-def open_icon(data: bytes | None, size: int) -> Image.Image | None:
-    if not data:
-        return None
-    try:
-        return Image.open(io.BytesIO(data)).convert("RGBA").resize((size, size), Image.LANCZOS)
-    except Exception:
-        return None
+class IconImages:
+    """Icônes d'un rendu, décodées une seule fois par id et redimensionnées une fois par taille
+    (une compo répète souvent les mêmes objets d'une ligne à l'autre). Vit le temps d'un rendu."""
+
+    def __init__(self, icons: Mapping[str, bytes | None]) -> None:
+        self.icons = icons
+        self._decoded: dict[str, Image.Image | None] = {}
+        self._sized: dict[tuple[str, int], Image.Image | None] = {}
+
+    def _decode(self, item_id: str) -> Image.Image | None:
+        if item_id not in self._decoded:
+            data = self.icons.get(item_id)
+            try:
+                self._decoded[item_id] = Image.open(io.BytesIO(data)).convert("RGBA") if data else None
+            except Exception:
+                self._decoded[item_id] = None
+        return self._decoded[item_id]
+
+    def get(self, item_id: str, size: int) -> Image.Image | None:
+        """Icône de `item_id` en `size` px (redimensionnée en LANCZOS), ou None si absente/illisible."""
+        key = (item_id, size)
+        if key not in self._sized:
+            img = self._decode(item_id)
+            self._sized[key] = img.resize((size, size), Image.LANCZOS) if img is not None else None
+        return self._sized[key]
 
 
 def centered_text(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], text: str, f, fill) -> None:

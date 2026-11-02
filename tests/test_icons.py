@@ -131,6 +131,17 @@ def test_cache_is_bounded(fetcher):
     assert len(fetcher.cache) <= 3 and "D" in fetcher.cache
 
 
+def test_full_cache_forgets_the_least_recently_served_icon(fetcher):
+    fetcher.cache_max = 3
+    session = FakeSession({url(8, i): [200] for i in "ABCD"})
+    for i in "ABC":
+        one(fetcher, session, i)
+    one(fetcher, session, "A")     # A resservie : B devient la plus ancienne
+    one(fetcher, session, "D")
+    assert set(fetcher.cache) == {"A", "C", "D"}
+    assert session.calls.count(url(8, "A")) == 1
+
+
 def test_each_fetcher_has_its_own_cache(tmp_path):
     a, b = IconFetcher(icons_dir=tmp_path), IconFetcher(icons_dir=tmp_path)
     one(a, FakeSession({url(8, "A"): [200]}), "A")
@@ -190,3 +201,21 @@ def test_fetch_empty_opens_no_session(fetcher):
 
     fetcher.session_factory = no_session
     assert asyncio.run(fetcher.fetch([])) == {}
+
+
+def test_fetch_all_cached_opens_no_session(fetcher):
+    fetcher.cache.update({"A": b"a", "INCONNU": None})
+
+    def no_session():
+        raise AssertionError("aucune session ne doit être ouverte")
+
+    fetcher.session_factory = no_session
+    assert asyncio.run(fetcher.fetch(["A", "INCONNU"])) == {"A": b"a", "INCONNU": None}
+
+
+def test_fetch_only_downloads_icons_missing_from_cache(fetcher):
+    fetcher.cache["A"] = b"a"
+    session = FakeSession({url(8, "B"): [(200, b"b")]})
+    fetcher.session_factory = session
+    assert asyncio.run(fetcher.fetch(["A", "B"])) == {"A": b"a", "B": b"b"}
+    assert session.calls == [url(8, "B")]
